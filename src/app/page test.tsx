@@ -1,13 +1,6 @@
 'use client';
 
 import {
-  barProgressColorVariants,
-  barVariants,
-  buttonPlayPauseVariants,
-  containerVariants,
-  diskVariants,
-} from '@/components/MusicVariance';
-import {
   Pause,
   Play,
   Repeat,
@@ -16,12 +9,12 @@ import {
   SkipForward,
   Volume2,
 } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, type Variants } from 'motion/react';
 import React, { useEffect, useRef, useState } from 'react';
 
 type isPlayType = 'loading' | 'pause' | 'playing';
 const Home = () => {
-  // const delays = [0, 0.1, 0.2, 0.3, 0.4];
+  const delays = [0, 0.1, 0.2, 0.3, 0.4];
   const [isPlay, setIsPlay] = useState<isPlayType>('pause');
   const [volume, setVolume] = useState(50);
 
@@ -37,37 +30,33 @@ const Home = () => {
   }, [volume]);
 
   useEffect(() => {
-    if (isPlay === 'playing') {
-      audioRef.current?.play();
-    } else if (isPlay === 'pause') {
-      audioRef.current?.pause();
-    } else if (isPlay === 'loading') {
-      audioRef.current?.pause();
-      setTimeout(() => {
-        setIsPlay('playing');
-      }, 5000);
-    }
-  }, [isPlay]);
-
-  useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isPlay === 'playing') {
+      audioRef.current?.play();
       interval = setInterval(() => {
         setCurrentTime((prev) => {
           if (prev >= totalDuration) {
             setIsPlay('pause');
+
             return totalDuration;
           }
           return prev + 0.1;
         });
-      }, 100); // Update setiap 100ms untuk animasi halus
-    } else if (interval) {
-      clearInterval(interval);
+      }, 300);
+    } else if (isPlay === 'pause') {
+      audioRef.current?.pause();
+      setIsPlay('pause');
+    } else {
+      setIsPlay('pause');
+      setTimeout(() => {
+        setIsPlay('playing');
+      }, 5000);
     }
     return () => {
       if (interval) clearInterval(interval);
     };
   }, [isPlay]);
+
   // Handler untuk tombol play/pause
   const togglePlayPause = () => {
     if (isPlay == 'playing') {
@@ -114,15 +103,45 @@ const Home = () => {
 
   const HandleNext = async () => {
     setIsPlay('loading');
-    console.log('handle next');
+    console.log('handle Next');
+  };
+  const barVariants: Variants = {
+    loading: {
+      height: 16,
+      transition: {
+        duration: 0.2,
+      },
+    },
+    paused: {
+      height: 8,
+      transition: {
+        duration: 0.2,
+      },
+    },
+    Playing: {
+      height: [6, 32, 6],
+      transition: {
+        duration: 1.5,
+        repeat: Infinity,
+        ease: 'easeInOut',
+      },
+    },
   };
 
+  const handleColor =
+    isPlay === 'playing' ? 'bg-primary-300' : 'bg-neutral-500';
+
+  const handleOpacity = isPlay === 'loading' ? 'opacity-50' : 'opacity-100';
+
+  if (!isPlay) return setIsPlay('loading');
+
   return (
-    <div className=' flex items-center justify-center min-h-screen min-w-screen bg-neutral-950 '>
-      <motion.div
-        className='flex flex-col gap-20 p-16 rounded-2xl bg-[#0F0F0F] overflow-hidden'
-        variants={containerVariants}
-        animate={isPlay}
+    <div className=' flex items-center justify-center min-h-screen min-w-screen bg-neutral-950'>
+      <div
+        className='flex flex-col gap-20 p-16 rounded-2xl bg-[#0F0F0F]'
+        style={{
+          boxShadow: `1px 1px 20px ${isPlay === 'playing' ? '#8B5CF6' : ''}`,
+        }}
       >
         {/* Logo & Title & Dynamic Bar */}
         <div className='flex flex-col'>
@@ -130,9 +149,27 @@ const Home = () => {
           <div className=' flex gap-24'>
             {/* Logo */}
             <motion.div
-              className={`size-120 bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center rounded-[12px]`}
-              variants={diskVariants}
-              animate={isPlay}
+              className={`size-120 bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center rounded-[12px] ${handleOpacity}`}
+              initial={{ rotate: 0, scale: 1 }}
+              animate={{
+                rotate: isPlay === 'playing' ? 360 : 0,
+                scale:
+                  isPlay === 'playing' ? 1 : isPlay === 'pause' ? 0.95 : 0.9,
+              }}
+              transition={{
+                rotate: {
+                  repeat: isPlay === 'playing' ? Infinity : 0,
+                  duration: isPlay === 'playing' ? 15 : 0,
+                  ease: 'linear',
+                },
+
+                scale: {
+                  type: 'spring',
+                  stiffness: 300,
+                  damping: 20,
+                  duration: 0.3,
+                },
+              }}
             >
               <div className='display-2xl-bold'>🎵</div>
             </motion.div>
@@ -143,14 +180,31 @@ const Home = () => {
             </div>
           </div>
           {/* Dynamic Bar */}
-          <div className='flex gap-4 h-32 ml-144 -mt-10 items-end'>
-            {[0, 0.1, 0.2, 0.3, 0.4].map((i) => (
+          <div className={`mx-144 -mt-10 bars items-end ${handleOpacity}`}>
+            {delays.map((d, i) => (
               <motion.div
-                className=' bg-primary-200'
                 key={i}
-                style={{ width: 8, originY: 1 }}
+                className='bg-primary-200'
+                style={{ originY: 1, width: 8 }}
+                initial={{ height: 6 }}
                 variants={barVariants}
-                custom={i}
+                animate={{
+                  height:
+                    isPlay === 'loading'
+                      ? 16
+                      : isPlay === 'pause'
+                      ? 6
+                      : [6, 32, 6],
+                }}
+                transition={{
+                  height: {
+                    duration: isPlay === 'playing' ? 0.5 : 0.2,
+                    repeat: isPlay === 'playing' ? Infinity : 0,
+                    delay: isPlay === 'playing' ? d : 0,
+                    ease: 'easeInOut',
+                  },
+                  duration: 0.3,
+                }}
               />
             ))}
           </div>
@@ -171,8 +225,7 @@ const Home = () => {
           onClick={handleProgressClick}
         >
           <motion.div
-            className={`h-8 rounded-full`}
-            variants={barProgressColorVariants}
+            className={`h-8 rounded-full ${handleColor}`}
             style={{ width: `${progressPercentage}%` }}
             animate={{ width: `${progressPercentage}%` }}
             transition={{ duration: 0.3 }}
@@ -187,35 +240,36 @@ const Home = () => {
 
         {/* --End Test */}
         {/* Button Action */}
-        <motion.div className='flex justify-center gap-16 items-center'>
-          {/* shuffle */}
+        <div className='flex justify-center gap-16 items-center'>
           <motion.div
             className='p-8 cursor-pointer '
             whileHover={{ scale: 1.05, color: '#ffffff' }}
             whileTap={{ scale: 0.95 }}
             transition={{ color: { duration: 0.5 } }}
           >
-            <Shuffle className='text-neutral-300 hover:text-white' size='20' />
+            <Shuffle color='#D5D7DA' size='20' />
           </motion.div>
-          {/* Back */}
+
           <motion.div
             className='p-8 cursor-pointer'
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={HandleNext}
           >
-            <SkipBack className='text-neutral-300 hover:text-white' size='20' />
+            <SkipBack color='#D5D7DA' size='20' />
           </motion.div>
-          {/* Play/Pause */}
+
           <motion.div
-            className={`size-56  flex justify-center items-center rounded-full cursor-pointer text-neutral-300 hover:text-white`}
+            className={`size-56  flex justify-center items-center rounded-full cursor-pointer ${handleColor}`}
             onClick={togglePlayPause}
-            variants={buttonPlayPauseVariants}
-            initial='playing'
-            whileHover='hover'
-            whileTap='tap'
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
-            {isPlay === 'playing' ? <Pause size='24' /> : <Play size='24' />}
+            {isPlay === 'playing' ? (
+              <Pause color='#D5D7DA' size='24' />
+            ) : (
+              <Play color='#D5D7DA' size='24' />
+            )}
           </motion.div>
 
           <motion.div
@@ -224,19 +278,16 @@ const Home = () => {
             whileTap={{ scale: 0.95 }}
             onClick={HandleNext}
           >
-            <SkipForward
-              className='text-neutral-300 hover:text-white'
-              size='20'
-            />
+            <SkipForward color='#D5D7DA' size='20' />
           </motion.div>
           <motion.div
             className='p-8 cursor-pointer'
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <Repeat className='text-neutral-300 hover:text-white' size='20' />
+            <Repeat color='#D5D7DA' size='20' />
           </motion.div>
-        </motion.div>
+        </div>
         {/* Volume */}
         <div className='flex gap-8 items-center '>
           <Volume2 color='#A4A7AE' size='16' />
@@ -254,7 +305,7 @@ const Home = () => {
           </div>
         </div>
         <div className='text-white'>{volume.toFixed(2)}</div>
-      </motion.div>
+      </div>
     </div>
   );
 };
