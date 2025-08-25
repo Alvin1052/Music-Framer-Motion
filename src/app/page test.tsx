@@ -23,6 +23,7 @@ const Home = () => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const sliderRef = useRef<HTMLDivElement>(null);
 
+  console.log(audioRef);
   useEffect(() => {
     if (audioRef.current) {
       audioRef.current.volume = volume / 100; // Volume audio dari 0 ke 1
